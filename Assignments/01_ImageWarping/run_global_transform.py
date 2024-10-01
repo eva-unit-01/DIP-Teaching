@@ -21,6 +21,24 @@ def apply_transform(image, scale, rotation, translation_x, translation_y, flip_h
     ### FILL: Apply Composition Transform 
     # Note: for scale and rotation, implement them around the center of the image （围绕图像中心进行放缩和旋转）
 
+    # transform_matrix = cv2.getRotationMatrix2D((image.shape[1]//2+pad_size, image.shape[0]//2+pad_size), rotation, scale)
+    # transform_matrix[0, 2] += translation_x  # x方向平移
+    # transform_matrix[1, 2] += translation_y  # y方向平移
+
+
+    # # Apply the flip horizontal transform
+    # transformed_image = cv2.warpAffine(image, transform_matrix, (pad_size*2+image.shape[0], pad_size*2+image.shape[1]))
+    # if flip_horizontal:
+    #     transformed_image = cv2.flip(transformed_image, 1)
+    
+    transform_matrix = np.array([[np.cos(rotation/180*np.pi), -np.sin(rotation/180*np.pi),0],[np.sin(rotation/180*np.pi), np.cos(rotation/180*np.pi),0],[0,0,1]],dtype=np.float32)
+    scale_matrix = np.array([[scale,0,0],[0,scale,0],[0,0,1]])
+    translation_matrix = np.array([[1,0,translation_x],[0,1,translation_y],[0,0,1]])
+    center_translation_matrix = np.array([[1,0,-image.shape[1]/2],[0,1,-image.shape[0]/2],[0,0,1]])#请注意！！image.shape[0]是高度！
+    transform_matrix = (-center_translation_matrix+2*np.eye(3))@scale_matrix @  transform_matrix @translation_matrix @center_translation_matrix
+    transformed_image = cv2.warpAffine(image, transform_matrix[:2,:], (pad_size*2+image.shape[0], pad_size*2+image.shape[1]))
+    if flip_horizontal:
+        transformed_image = cv2.flip(transformed_image, 1)
     return transformed_image
 
 # Gradio Interface

@@ -47,9 +47,64 @@ def point_guided_deformation(image, source_pts, target_pts, alpha=1.0, eps=1e-8)
     ------
         A deformed image.
     """
-    
-    warped_image = np.array(image)
+    warped_image = np.full(image.shape,fill_value=255,dtype=np.uint8)
+    source_pts = np.array(source_pts,dtype=np.float32)
+    target_pts = np.array(target_pts,dtype=np.float32)
+    #由坐标系标记方式转换为矩阵标记方式
+    source_pts = np.column_stack((source_pts[:,1],source_pts[:,0]))
+    target_pts = np.column_stack((target_pts[:,1],target_pts[:,0]))
+    source_pts, target_pts = target_pts, source_pts  # 交换源点和目标点，使得目标点为控制点，源点为目标点
+
     ### FILL: 基于MLS or RBF 实现 image warping
+    ### MLS
+    width = image.shape[1]
+    height = image.shape[0]
+    numControlPoints = source_pts.shape[0]
+
+    for j in range(width):
+        for i in range(height):
+            #NOTICE: 在image(i,j) 中是以矩阵方式表示，矩阵第i行第j列；
+            #          在source_pts中，以坐标系方式表示，控制点坐标(i,j)代表的第j行第i列，两者表示方式有区别。一致以image方式为准。
+            pointWeights = np.linalg.norm([i,j]-source_pts,axis=1)+eps
+            pointWeights = pointWeights**(-2*alpha)
+    
+            totalWeight = np.sum(pointWeights)
+            pStar = pointWeights @ source_pts / totalWeight
+            pHat = source_pts - pStar
+            pHatVertical = np.column_stack((-pHat[:,1],pHat[:,0]))
+
+            qStar = pointWeights @ target_pts / totalWeight
+            qHat = target_pts - qStar
+            qHatVertical = np.column_stack((-qHat[:,1],qHat[:,0]))
+
+            w1 = np.sum((pointWeights[:,np.newaxis] * pHat)*qHat)
+            w2 = np.sum((pointWeights[:,np.newaxis] * qHat)*pHatVertical)
+            
+            muR = np.sqrt(w1**2 + w2**2)
+            M = np.zeros((2,2))
+            for k in range(numControlPoints):
+                M += pointWeights[k] * np.vstack((pHat[k],-pHatVertical[k]))@np.hstack((qHat[k].reshape(-1,1),-qHatVertical[k].reshape(-1,1)))/muR
+
+            dest = ([i,j]-pStar)@M + qStar
+
+            dest[0] = max(0,min(dest[0],height-1))
+            dest[1] = max(0,min(dest[1],width-1))
+
+            lowX = int(np.ceil(dest[0]))-1
+            lowY = int(np.ceil(dest[1]))-1
+            highX = int(np.ceil(dest[0]))
+            highY = int(np.ceil(dest[1]))
+
+            lowX = max(0,lowX)
+            lowY = max(0,lowY)
+            highX = min(height-1,highX)
+            highY = min(width-1,highY)
+
+            a = dest[0] - lowX
+            b = dest[1] - lowY
+
+            warped_image[i,j] = (1-a)*(1-b)*image[lowX,lowY] + a*(1-b)*image[highX,lowY] + (1-a)*b*image[lowX,highY] + a*b*image[highX,highY]
+
 
     return warped_image
 
