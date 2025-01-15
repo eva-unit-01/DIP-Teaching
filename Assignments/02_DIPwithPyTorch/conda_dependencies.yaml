@@ -1,0 +1,10 @@
+name: dip-env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - numpy=2.2.1
+  - pandas=2.2.3
+  - gradio=5.9.1
+  - opencv-python=4.10.0
+  - torch=2.5.1

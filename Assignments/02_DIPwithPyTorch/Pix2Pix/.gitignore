@@ -1,0 +1,8 @@
+# Ignore datasets
+datasets/
+
+# Ignore training results
+train_results/
+val_results/
+checkpoints/
+__pycache__
